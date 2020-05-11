@@ -1,0 +1,55 @@
+---
+- name: Install pre-requisites for ec2_ plugins
+  pip:
+    name: ['botocore', 'boto3']
+    state: present
+
+- name: Get Netuitive apt key
+  command: wget "https://repos.app.netuitive.com/netuitive.gpg" -O /root/netuitive.gpg
+
+- name: Add Netuitive apt key
+  command: apt-key add /root/netuitive.gpg
+
+- name: Gather EC2 instance metadata
+  ec2_metadata_facts:
+
+- name: Obtain EC2 tags for this instance
+  ec2_tag:
+    region: "{{ ansible_ec2_placement_region }}"
+    resource: "{{ ansible_ec2_instance_id }}"
+    state: list
+  register: ec2_tags
+
+- name: Set hostname variable
+  set_fact:
+    netuitive_hostname: "{{ ec2_tags.tags.Name }}"
+
+- name: Add repository to source list
+  apt_repository:
+    repo: deb https://repos.app.netuitive.com/deb/ stable main
+    state: present
+
+- name: Update apt and install netuitive-agent
+  apt:
+    name: netuitive-agent
+    state: present
+    update_cache: yes
+
+- name: Stop Netuitive agent
+  service:
+    enabled: no
+    state: stopped
+    name: netuitive-agent
+
+- name: Configure and restart Netuitive agent
+  template:
+    src: netuitive-agent.conf
+    dest: "{{ netuitive_conf_file }}"
+    owner: root
+    mode: 0644
+    
+- name: Restart Netuitive agent
+  service:
+    enabled: yes
+    state: restarted
+    name: netuitive-agent

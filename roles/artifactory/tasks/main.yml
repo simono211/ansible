@@ -1,0 +1,170 @@
+---
+- name: Work-around for ECR issue https://github.com/docker/cli/issues/1136
+  shell: "mv /usr/bin/docker-credential-secretservice /usr/bin/docker-credential-secretservice.not"
+  ignore_errors: yes
+
+- name: login to ECR
+  shell: "aws ecr get-login --no-include-email --region {{ aws_region }} |bash"
+
+- name: cleanup old containers
+  shell: "docker system prune --force"
+
+- name: pull container
+  shell: "docker pull {{ image }}:{{ version }}"
+
+# TODO Do we need this again?
+- name: Revert Work-around for ECR issue https://github.com/docker/cli/issues/1136
+  shell: "mv /usr/bin/docker-credential-secretservice.not /usr/bin/docker-credential-secretservice"
+  ignore_errors: yes
+
+- name: Format EBS volume
+  become: yes
+  when: env != "prod"
+  filesystem:
+    fstype: "{{ fs_type }}"
+    dev: "/dev/{{ device_name }}"
+
+- name: Mount EBS volume
+  become: yes
+  mount:
+    path: "{{ artifactory_home }}"
+    src: "/dev/{{ device_name }}"
+    fstype: "{{ fs_type }}"
+    state: mounted
+
+- name: Create group
+  group:
+    name: "{{ user }}"
+    gid: "{{ id }}"
+    state: present
+
+- name: Add user
+  user:
+    name: "{{ user }}"
+    uid: "{{ id }}"
+    shell: /bin/false
+    groups: "{{ user }}"
+    create_home: yes
+    home: "{{ artifactory_home }}"
+
+- name: Create access directory
+  become: true
+  file:
+    path: "{{ artifactory_home }}/access"
+    state: directory
+    owner: "{{ user }}"
+    group: "{{ user }}"
+
+- name: Rsync access files
+  synchronize:
+    src: access
+    dest: "{{ artifactory_home }}"
+    recursive: yes
+    group: yes
+    owner: yes
+
+- name: Fix access permissions
+  become: true
+  file:
+    path: "{{ artifactory_home }}/access"
+    state: directory
+    owner: "{{ user }}"
+    group: "{{ user }}"
+    recurse: yes
+
+- name: Restrict access-admin bootstrap.creds permissions
+  become: true
+  file:
+    path: "{{ artifactory_home }}/access/etc/bootstrap.creds"
+    owner: "{{ user }}"
+    group: "{{ user }}"
+    mode: 0600
+
+- name: Create backup directory
+  become: true
+  file:
+    path: "{{ artifactory_home }}/backup"
+    state: directory
+    owner: "{{ user }}"
+    group: "{{ user }}"
+
+- name: Create data directory
+  become: true
+  file:
+    path: "{{ artifactory_home }}/data"
+    state: directory
+    owner: "{{ user }}"
+    group: "{{ user }}"
+
+- name: Create etc directory
+  become: true
+  file:
+    path: "{{ artifactory_home }}/etc"
+    state: directory
+    owner: "{{ user }}"
+    group: "{{ user }}"
+    recurse: yes
+
+- name: Rsync etc files
+  synchronize:
+    src: etc
+    dest: "{{ artifactory_home }}"
+    recursive: yes
+    group: yes
+    owner: yes
+
+- name: Fix etc permissions
+  become: true
+  file:
+    path: "{{ artifactory_home }}/etc"
+    state: directory
+    owner: "{{ user }}"
+    group: "{{ user }}"
+    recurse: yes
+
+- name: Create logs directory
+  become: true
+  file:
+    path: "{{ artifactory_home }}/logs"
+    state: directory
+    owner: "{{ user }}"
+    group: "{{ user }}"
+
+- name: Create security directory
+  become: true
+  file:
+    path: "{{ artifactory_home }}/security"
+    state: directory
+    owner: "{{ user }}"
+    group: "{{ user }}"
+    mode: 0700
+
+- name: Create security key
+  become: true
+  copy:
+    src: etc/security/artifactory.key
+    dest: "{{ artifactory_home }}/security/artifactory.key"
+    owner: "{{ user }}"
+    group: "{{ user }}"
+    mode: 0600
+
+# Runs Container
+- name: run "{{ app_name }}" docker container
+  docker_container:
+    name: "{{ app_name }}"
+    image: "{{ image }}:{{ version }}"
+    state: started
+    restart_policy: always
+    force_kill: yes
+    dns_servers: "172.17.0.2"
+    log_driver: "json-file"
+    log_options:
+      max-size: "1024m"
+    ports:
+      - 8081:8081
+    volumes:
+      - "{{ artifactory_home }}/access:{{ internal_home }}/access"
+      - "{{ artifactory_home }}/backup:{{ internal_home }}/backup"
+      - "{{ artifactory_home }}/data:{{ internal_home }}/data"
+      - "{{ artifactory_home }}/etc:{{ internal_home }}/etc"
+      - "{{ artifactory_home }}/logs:{{ internal_home }}/logs"

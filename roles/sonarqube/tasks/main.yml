@@ -1,0 +1,9 @@
+---
+- name: Install sonar.properties
+  become: true
+  template:
+    src: sonar.properties
+    dest: /opt/bitnami/apps/sonarqube/sonarqube/conf/sonar.properties
+    owner: root
+    group: sonarqube
+    mode: '0644'

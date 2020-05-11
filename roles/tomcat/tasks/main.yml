@@ -1,0 +1,64 @@
+---
+- name: Ensure group tomcat exists
+  group:
+    name: tomcat
+    state: present
+
+- name: Add tomcat user
+  user:
+    name: tomcat
+    shell: /bin/false
+    groups: tomcat
+    append: yes
+    create_home: yes
+    home: /opt/tomcat
+    system: yes
+
+- name: Download tomcat
+  get_url:
+    url: "{{ tomcat_host }}/tomcat/tomcat-{{ tomcat_major_version }}/v{{ tomcat_version }}/bin/apache-tomcat-{{ tomcat_version }}.tar.gz"
+    dest: "/tmp/apache-tomcat-{{ tomcat_version }}.tar.gz"
+
+- name: Extract tomcat into /opt/tomcat
+  become: true
+  unarchive:
+    src: "/tmp/apache-tomcat-{{ tomcat_version }}.tar.gz"
+    dest: /opt/tomcat
+
+- name: Make scripts executable
+  become: true
+  shell: "find /opt/tomcat/apache-tomcat-{{ tomcat_version }}/bin/*.sh -type f -name '*.sh' -exec chmod +x {} \\;"
+
+- name: Change permissions
+  become: true
+  file:
+    path: "/opt/tomcat/apache-tomcat-{{ tomcat_version }}"
+    state: directory
+    owner: tomcat
+    group: tomcat
+    recurse: yes
+
+- name: Create symbolic link
+  become: true
+  file:
+    src: "/opt/tomcat/apache-tomcat-{{ tomcat_version }}"
+    dest: /opt/tomcat/latest
+    owner: tomcat
+    group: tomcat
+    state: link
+
+- name: Create a systemd unit file
+  become: true
+  template:
+    src: tomcat.service
+    dest: /etc/systemd/system/tomcat.service
+    owner: root
+    group: root
+    mode: '0644'
+
+- name: Restart tomcat service
+  systemd:
+    enabled: yes
+    state: restarted
+    daemon_reload: yes
+    name: tomcat

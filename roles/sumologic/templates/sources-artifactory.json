@@ -1,0 +1,80 @@
+{
+  "api.version":"v1",
+  "sources":[
+    {
+      "name":"{{ env }}-{{ app_name }}",
+      "category":"{{ env }}/{{ app_name }}",
+      "automaticDateParsing":true,
+      "multilineProcessingEnabled":true,
+      "useAutolineMatching":true,
+      "forceTimeZone":false,
+      "filters":[],
+      "cutoffTimestamp":0,
+      "encoding":"UTF-8",
+      "allContainers":true,
+      "collectEvents":true,
+      "certPath":"",
+      "uri":"unix:///var/run/docker.sock",
+      "specifiedContainers":[],
+      "sourceType":"DockerLog"
+    },{
+      "name":"{{ env }}-{{ app_name }}-ec2_user_data",
+      "category":"{{ env }}/{{ app_name }}/aws",
+      "automaticDateParsing":true,
+      "multilineProcessingEnabled":true,
+      "useAutolineMatching":true,
+      "forceTimeZone":false,
+      "filters":[],
+      "cutoffTimestamp":0,
+      "encoding":"UTF-8",
+      "pathExpression":"/var/log/cloud-init-output.log*",
+      "blacklist":[],
+      "sourceType":"LocalFile"
+    },
+    {
+      "name":"{{ env }}-{{ app_name }}-server",
+      "category":"{{ env }}/{{ app_name }}/console",
+      "hostName":"{{ ansible_ec2_local_ipv4 }}",
+      "sourceType":"LocalFile",
+      "pathExpression":"{{ artifactory_home }}/logs/artifactory.log",
+      "automaticDateParsing":true,
+      "multilineProcessingEnabled":true,
+      "forceTimeZone":false,
+      "cutoffTimestamp":0,
+      "encoding":"UTF-8"
+    },{
+      "name":"{{ env }}-{{ app_name }}-access",
+      "category":"{{ env }}/{{ app_name }}/access",
+      "hostName":"{{ ansible_ec2_local_ipv4 }}",
+      "sourceType":"LocalFile",
+      "pathExpression":"{{ artifactory_home }}/logs/access.log",
+      "automaticDateParsing":true,
+      "multilineProcessingEnabled":true,
+      "forceTimeZone":false,
+      "cutoffTimestamp":0,
+      "encoding":"UTF-8"
+    },{
+      "name":"{{ env }}-{{ app_name }}-request",
+      "category":"{{ env }}/{{ app_name }}/request",
+      "hostName":"{{ ansible_ec2_local_ipv4 }}",
+      "sourceType":"LocalFile",
+      "pathExpression":"{{ artifactory_home }}/logs/request.log",
+      "automaticDateParsing":true,
+      "multilineProcessingEnabled":true,
+      "forceTimeZone":false,
+      "cutoffTimestamp":0,
+      "encoding":"UTF-8"
+    },{
+      "name":"{{ env }}-{{ app_name }}-traffic",
+      "category":"{{ env }}/{{ app_name }}/traffic",
+      "hostName":"{{ ansible_ec2_local_ipv4 }}",
+      "sourceType":"LocalFile",
+      "pathExpression":"{{ artifactory_home }}/logs/traffic.*.log",
+      "automaticDateParsing":true,
+      "multilineProcessingEnabled":true,
+      "forceTimeZone":false,
+      "cutoffTimestamp":0,
+      "encoding":"UTF-8"
+    }
+  ]
+}

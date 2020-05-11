@@ -1,0 +1,31 @@
+{
+  "api.version":"v1",
+  "sources":[
+    {
+      "name":"{{ env }}-{{ app_name }}-ec2_user_data",
+      "category":"{{ env }}/{{ app_name }}/aws",
+      "automaticDateParsing":true,
+      "multilineProcessingEnabled":true,
+      "useAutolineMatching":true,
+      "forceTimeZone":false,
+      "filters":[],
+      "cutoffTimestamp":0,
+      "encoding":"UTF-8",
+      "pathExpression":"/var/log/cloud-init-output.log*",
+      "blacklist":[],
+      "sourceType":"LocalFile"
+    },
+    {
+      "name":"{{ env }}-{{ app_name }}",
+      "category":"{{ env }}/{{ app_name }}",
+      "hostName":"{{ ansible_ec2_local_ipv4 }}",
+      "sourceType":"LocalFile",
+      "pathExpression":"/var/log/openvpnas.log",
+      "automaticDateParsing":true,
+      "multilineProcessingEnabled":true,
+      "forceTimeZone":false,
+      "cutoffTimestamp":0,
+      "encoding":"UTF-8"
+    }
+  ]
+}

@@ -1,0 +1,17 @@
+---
+- name: Add Zulu apt key
+  apt_key:
+    keyserver: keyserver.ubuntu.com
+    id: "0xB1998361219BD9C9"
+    state: present
+
+- name: Add Zulu repository
+  apt_repository:
+    repo: "deb http://repos.azulsystems.com/ubuntu stable main"
+    state: present
+
+- name: Install Zulu JDK
+  become: true
+  apt:
+    name: "zulu-{{ java_version }}"
+    update_cache: yes

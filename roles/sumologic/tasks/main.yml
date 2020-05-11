@@ -1,0 +1,44 @@
+---
+- name: Get EC2 facts
+  ec2_metadata_facts:
+
+- name: Parse local IP address
+  debug: var=ansible_ec2_local_ipv4
+
+- name: Download Debian collector package
+  get_url:
+    url: https://collectors.sumologic.com/rest/download/deb/64
+    dest: /tmp/sumocollector.deb
+
+- name: Install Debian collector package
+  apt:
+    update_cache: yes
+    deb: /tmp/sumocollector.deb
+
+- name: Setup user.properties file
+  template:
+    src: user.properties
+    dest: /opt/SumoCollector/config/user.properties
+    mode: 0644
+
+- name: Setup sources.json file
+  template:
+    src: "{{ sumo_sources | default('sources.json') }}"
+    dest: /opt/SumoCollector/config/sources.json
+    mode: 0644
+
+- name: Create a symbolic link to the Sumologic collector
+  file:
+    src: /opt/SumoCollector/collector
+    dest: /etc/init.d/sumo-collector
+    owner: root
+    group: root
+    state: link
+
+- name: Install the Sumologic collector
+  shell:
+    update-rc.d "sumo-collector" defaults
+
+- name: Start the Sumologic collector
+  shell:
+    /opt/SumoCollector/collector restart

@@ -1,0 +1,10 @@
+---
+- name: Install mariadb
+  become: true
+  apt:
+    name: "{{ packages }}"
+    update_cache: yes
+  vars:
+    packages:
+      - mariadb-server
+      - python-mysqldb

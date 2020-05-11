@@ -1,0 +1,126 @@
+---
+- name: Ensure group activemq exists
+  group:
+    name: activemq
+    state: present
+
+- name: Add activemq user
+  user:
+    name: activemq
+    shell: /bin/false
+    groups: activemq
+    append: yes
+    create_home: yes
+    home: /opt/activemq
+    system: yes
+
+- name: Download activemq with check (sha512)
+  get_url:
+    url: "https://archive.apache.org/dist/activemq/{{ activemq_version }}/apache-activemq-{{ activemq_version }}-bin.tar.gz"
+    dest: "/tmp/apache-activemq-{{ activemq_version }}-bin.tar.gz"
+    checksum: "sha1:{{ activemq_sha }}"
+
+- name: Extract activemq into /opt/activemq
+  become: true
+  unarchive:
+    src: "/tmp/apache-activemq-{{ activemq_version }}-bin.tar.gz"
+    dest: /opt/activemq
+
+- name: Change permissions
+  become: true
+  file:
+    path: "/opt/activemq/apache-activemq-{{ activemq_version }}"
+    state: directory
+    owner: activemq
+    group: activemq
+    recurse: yes
+
+- name: Ensure user is activemq
+  lineinfile:
+    path: "/opt/activemq/apache-activemq-{{ activemq_version }}/bin/env"
+    regexp: '^ACTIVEMQ_USER='
+    line: "ACTIVEMQ_USER=\"activemq\""
+
+- name: Remove activemq console regular user
+  lineinfile:
+    path: "/opt/activemq/apache-activemq-{{ activemq_version }}/conf/jetty-realm.properties"
+    state: absent
+    regexp: '^user'
+
+- name: Generate activemq console admin password
+  shell: tr -d -c "a-zA-Z0-9" < /dev/urandom | head -c 10
+  register: activemq_console_password
+
+- name: Inform user of activemq console admin password
+  debug:
+    msg: "ActiveMQ console admin password was set to {{ activemq_console_password.stdout }}"
+
+- name: Change activemq console admin password
+  lineinfile:
+    path: "/opt/activemq/apache-activemq-{{ activemq_version }}/conf/jetty-realm.properties"
+    regexp: '^admin: admin'
+    line: "admin: {{ activemq_console_password.stdout }}, admin"
+
+- name: Enable activemq console HTTPS access
+  lineinfile:
+    path: "/opt/activemq/apache-activemq-{{ activemq_version }}/conf/jetty.xml"
+    regexp: '<!-- bean id="SecureConnector"'
+    line: '                <bean id="SecureConnector" class="org.eclipse.jetty.server.ServerConnector">'
+
+- name: Enable activemq console HTTPS access
+  lineinfile:
+    path: "/opt/activemq/apache-activemq-{{ activemq_version }}/conf/jetty.xml"
+    regexp: '</bean -->'
+    line: "                </bean>"
+
+- name: Disable activemq console HTTP access
+  replace:
+    path: "/opt/activemq/apache-activemq-{{ activemq_version }}/conf/jetty.xml"
+    after: '<bean id="Connector"'
+    before: '<bean id="SecureConnector"'
+    regexp: '</bean>'
+    replace: '</bean -->'
+
+- name: Disable activemq console HTTP access
+  lineinfile:
+    path: "/opt/activemq/apache-activemq-{{ activemq_version }}/conf/jetty.xml"
+    regexp: '<bean id="Connector"'
+    line: '                <!-- bean id="Connector" class="org.eclipse.jetty.server.ServerConnector"'
+
+- name: Disable activemq console HTTP access
+  lineinfile:
+    path: "/opt/activemq/apache-activemq-{{ activemq_version }}/conf/jetty.xml"
+    state: absent
+    regexp: '<!-- see the jettyPort bean -->'
+
+- name: Create symbolic link
+  become: true
+  file:
+    src: "/opt/activemq/apache-activemq-{{ activemq_version }}"
+    dest: /opt/activemq/latest
+    owner: activemq
+    group: activemq
+    state: link
+
+- name: Create a systemd unit file
+  become: true
+  copy:
+    src: activemq.service
+    dest: /etc/systemd/system/activemq.service
+    owner: root
+    group: root
+    mode: '0644'
+
+- name: Set PID file
+  become: true
+  lineinfile:
+    path: /etc/systemd/system/activemq.service
+    regexp: '^PIDFile='
+    line: "PIDFile=/opt/activemq/apache-activemq-{{ activemq_version }}/data/activemq.pid"
+
+- name: Restart activemq service
+  systemd:
+    enabled: yes
+    state: restarted
+    daemon_reload: yes
+    name: activemq

@@ -1,0 +1,35 @@
+{
+  "api.version":"v1",
+  "sources":[
+  {
+    "name":"{{ env }}-{{ app_name }}",
+    "category":"{{ env }}/{{ app_name }}",
+    "automaticDateParsing":true,
+    "multilineProcessingEnabled":true,
+    "useAutolineMatching":true,
+    "forceTimeZone":false,
+    "filters":[],
+    "cutoffTimestamp":0,
+    "encoding":"UTF-8",
+    "allContainers":true,
+    "collectEvents":true,
+    "certPath":"",
+    "uri":"unix:///var/run/docker.sock",
+    "specifiedContainers":[],
+    "sourceType":"DockerLog"
+  },{
+      "name":"{{ env }}-{{ app_name }}-ec2_user_data",
+      "category":"{{ env }}/{{ app_name }}/aws",
+      "automaticDateParsing":true,
+      "multilineProcessingEnabled":true,
+      "useAutolineMatching":true,
+      "forceTimeZone":false,
+      "filters":[],
+      "cutoffTimestamp":0,
+      "encoding":"UTF-8",
+      "pathExpression":"/var/log/cloud-init-output.log*",
+      "blacklist":[],
+      "sourceType":"LocalFile"
+    }
+  ]
+}

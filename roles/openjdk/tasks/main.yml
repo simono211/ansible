@@ -1,0 +1,6 @@
+---
+- name: install openjdk
+  become: true
+  apt:
+    name: "openjdk-{{ java_version }}-jdk"
+    update_cache: yes

@@ -1,0 +1,55 @@
+---
+- name: Set openvpn user password
+  become: true
+  user:
+    name: openvpn
+    password: "{{ openvpnas_password | password_hash('sha512') }}"
+
+- name: Rsync etc files
+  copy:
+    src: etc/logo.png
+    dest: "{{ ovpn_path }}/etc/logo.png"
+    group: root
+    owner: root
+
+- name: Download last db backup
+  aws_s3:
+    bucket: openvpnas
+    object: backup.tar.gz
+    dest: /usr/local/openvpn_as/backup.tar.gz
+    mode: get
+
+- name: Extract backup
+  become: true
+  unarchive:
+    src: /usr/local/openvpn_as/backup.tar.gz
+    dest: /usr/local/openvpn_as/
+
+- name: Create scripts
+  copy:
+    src: '{{ item }}'
+    dest: /var/tmp/
+    mode: '0755'
+  with_fileglob:
+    - "scripts/*"
+
+- name: Restore config from backup
+  become: true
+  environment:
+    FQDN: "{{ fqdn }}"
+  shell: /var/tmp/restore_config.sh
+
+- name: Schedule nightly database backup
+  cron:
+    name: "Backup database nightly"
+    minute: 0
+    hour: 9
+    user: root
+    job: "/var/tmp/backup_config.sh && /var/tmp/backup_to_s3.sh"
+
+- name: Restart openvpnas service
+  systemd:
+    enabled: yes
+    state: restarted
+    daemon_reload: yes
+    name: openvpnas

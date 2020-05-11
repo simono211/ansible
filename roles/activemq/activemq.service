@@ -1,0 +1,22 @@
+[Unit]
+Description=ActiveMQ async message broker
+After=network.target
+
+[Service]
+Type=forking
+
+User=activemq
+Group=activemq
+
+PrivateTmp=true
+PIDFile=/opt/activemq/latest/data/activemq.pid
+
+Environment="JAVA_HOME=$(update-alternatives --query java | grep 'Value: ' | grep -o '/.*/jre')"
+Environment="JAVA_OPTS=-Djava.security.egd=file:///dev/urandom -Djava.awt.headless=true"
+
+ExecStart=/opt/activemq/latest/bin/activemq start
+Restart=on-abort
+ExecStop=/bin/kill -15 $MAINPID
+
+[Install]
+WantedBy=multi-user.target
